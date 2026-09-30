@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hangman</title>
+<style>
+:root{--bg1:#ffe9f3;--bg2:#e4f0ff;--card:#ffffff;--ink:#2b2350;--muted:#6b6490;--key:#f1ecff;--keyb:#c9bdf5;--vowel:#f5b800;--ok:#22a06b;--bad:#e11d48;--chalk:#2b2350;--slot:#7c4dff;--line:#000;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#2a1848;--bg2:#10284a;--card:#1e1838;--ink:#fff7e8;--muted:#b9b0e0;--key:#332a5c;--keyb:#54479a;--vowel:#ffd43b;--ok:#34d399;--bad:#f43f5e;--chalk:#fff7e8;--slot:#ff9ecb;--line:#fff7e8}}
+:root[data-theme="dark"]{--bg1:#2a1848;--bg2:#10284a;--card:#1e1838;--ink:#fff7e8;--muted:#b9b0e0;--key:#332a5c;--keyb:#54479a;--vowel:#ffd43b;--ok:#34d399;--bad:#f43f5e;--chalk:#fff7e8;--slot:#ff9ecb;--line:#fff7e8}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:linear-gradient(160deg,var(--bg1),var(--bg2)) fixed;color:var(--ink);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;display:flex;justify-content:center}
+main{width:100%;max-width:560px;padding:18px 14px 28px;display:flex;flex-direction:column;align-items:center;gap:12px}
+h1{margin:0;font-family:"Comic Sans MS","Chalkboard SE","Trebuchet MS",sans-serif;font-size:2.3rem;background:linear-gradient(90deg,#ff4d8d,#ff9f1c,#22c55e,#3b82f6,#8b5cf6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.badge{background:var(--card);border:2px solid var(--keyb);border-radius:999px;padding:5px 14px;font-weight:700;font-size:.95rem}
+#cat{background:#8b5cf6;border-color:#8b5cf6;color:#fff}
+.stage{background:var(--card);border-radius:22px;padding:10px;width:100%;display:flex;justify-content:center;box-shadow:0 6px 0 var(--keyb)}
+svg{width:100%;max-width:220px;height:auto}
+svg *{stroke:var(--chalk);stroke-width:5;stroke-linecap:round;fill:none}
+.face *{stroke-width:2.5}
+.eye{fill:var(--chalk)}
+.part{opacity:0;transition:opacity .25s}
+.part.on{opacity:1}
+.part.on.dead{stroke:var(--bad)}
+#word{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;min-height:56px}
+.slot{width:clamp(26px,8vw,38px);height:50px;border-bottom:5px solid var(--line);font:700 clamp(1.5rem,6vw,2rem) "Trebuchet MS",sans-serif;text-align:center;line-height:46px}
+.slot.miss{color:var(--bad)}
+#status{min-height:1.6em;font-size:1.2rem;font-weight:800;margin:0;text-align:center}
+#status.win{color:var(--ok)}#status.lose{color:var(--bad)}
+#keys{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;width:100%}
+#keys button{font-weight:800;font-size:1.1rem;font-family:inherit;padding:12px 0;border-radius:12px;border:3px solid var(--keyb);background:var(--key);color:var(--ink);cursor:pointer;transition:transform .1s}
+#keys button:active:not(:disabled){transform:scale(.92)}
+#keys button.vowel{border-color:var(--vowel)}
+#keys button:focus-visible,#again:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+#keys button.right{background:var(--ok);color:#fff}
+#keys button.wrong{background:var(--bad);color:#fff}
+#keys button:disabled{cursor:default}
+#again{font-weight:800;font-size:1.1rem;font-family:inherit;padding:12px 28px;border-radius:999px;border:none;background:linear-gradient(90deg,#ff4d8d,#ff9f1c);color:#fff;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.2)}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<main>
+  <h1>Hangman</h1>
+  <div class="badges"><span class="badge" id="cat"></span><span class="badge" id="count"></span></div>
+  <div class="stage">
+  <svg viewBox="0 0 200 220" role="img" aria-label="Hangman drawing">
+    <path d="M20 205H110M50 205V15H140V40"/>
+    <circle class="part dead" cx="140" cy="62" r="22"/>
+    <path class="part dead" d="M140 84V140"/>
+    <path class="part dead" d="M140 100L115 125"/>
+    <path class="part dead" d="M140 100L165 125"/>
+    <path class="part dead" d="M140 140L118 178"/>
+    <path class="part dead" d="M140 140L162 178"/>
+    <g id="worry" class="face" style="display:none"><circle class="eye" cx="132" cy="58" r="2.5"/><circle class="eye" cx="148" cy="58" r="2.5"/><path d="M126 50L136 53M154 50L144 53"/><path d="M132 74Q136 70 140 74T148 74"/></g>
+    <g id="sad" class="face" style="display:none"><circle class="eye" cx="132" cy="58" r="2.5"/><circle class="eye" cx="148" cy="58" r="2.5"/><path d="M129 76Q140 65 151 76"/></g>
+  </svg>
+  </div>
+  <p class="badge" id="left"></p>
+  <div id="word" aria-live="polite"></div>
+  <p id="status" role="status"></p>
+  <div id="keys"></div>
+  <button id="again" hidden>Play again</button>
+</main>
+<script>
+const WORDS={
+Animals:"elephant giraffe penguin dolphin kangaroo octopus squirrel cheetah zebra hippo rhino koala panda tiger monkey parrot turtle lobster gorilla buffalo peacock walrus otter beaver falcon jaguar rabbit hamster gerbil ferret hedgehog raccoon skunk badger moose reindeer antelope camel llama alpaca donkey pony stallion sheep goat rooster chicken duckling goose swan eagle owl sparrow robin pigeon crow flamingo toucan ostrich",
+Bugs:"butterfly caterpillar ladybug beetle grasshopper cricket firefly dragonfly mosquito spider scorpion centipede termite hornet wasp bumblebee cockroach snail earthworm moth",
+Ocean:"seahorse jellyfish starfish crab shrimp oyster clam whale shark seagull coral reef anchor lighthouse seaweed barnacle stingray urchin flounder tuna salmon sardine pelican manatee narwhal",
+Food:"pancake spaghetti avocado pretzel burrito broccoli cinnamon popcorn waffle noodle pickle cookie muffin lasagna sandwich pumpkin cabbage almond coconut mango peanut celery tomato yogurt pepper sausage banana apple orange grape cherry peach plum lemon melon berry strawberry blueberry pineapple watermelon carrot potato onion garlic spinach lettuce cucumber radish pizza hamburger taco pasta cheese butter honey pudding brownie cupcake donut pie cereal oatmeal omelet",
+Places:"volcano desert library harbor mountain island stadium museum jungle canyon glacier meadow village castle airport bakery theater market forest lagoon tunnel bridge garden prairie orchard temple",
+Geography:"continent equator peninsula valley plateau tundra savanna swamp oasis cliff cavern",
+Things:"umbrella backpack telescope keyboard lantern compass bicycle notebook scissors blanket pillow mirror candle helmet hammer ladder magnet pencil wallet whistle basket button camera clock guitar rocket envelope teapot spoon bucket broom shovel flashlight battery suitcase passport calendar kite puzzle marble hourglass toolbox paintbrush typewriter microscope binoculars parachute tent campfire",
+Sports:"soccer hockey tennis skating surfing archery bowling cycling diving fencing gymnastics boxing karate rowing sailing skiing climbing baseball football volleyball swimming wrestling marathon racquet trophy referee",
+Nature:"planet galaxy comet meteor eclipse rainbow thunder blizzard tornado breeze sunshine moonlight asteroid orbit crater tide river waterfall cloud lightning sunrise sunset horizon aurora storm frost drizzle",
+Science:"gravity electricity molecule oxygen satellite universe nebula laboratory experiment meteorite spacecraft",
+Jobs:"doctor teacher farmer pilot chef firefighter dentist artist plumber baker painter sailor singer writer scientist engineer carpenter mechanic librarian dancer actor gardener detective astronaut musician nurse judge",
+Feelings:"happy excited curious brave gentle cheerful proud silly sleepy grumpy nervous joyful calm eager lonely playful patient thankful hopeful worried surprised confused relaxed sneaky friendly generous",
+Clothes:"jacket sweater sneakers sandals mittens scarf pajamas raincoat hoodie gloves slippers necklace bracelet overalls sunglasses uniform costume apron sweatpants leggings blouse jeans bowtie earrings cardigan",
+Music:"melody rhythm trumpet trombone violin cello piano drums flute clarinet saxophone harmonica ukulele banjo harp concert chorus tambourine xylophone orchestra symphony opera lullaby encore",
+School:"classroom homework eraser marker recess textbook homeroom lesson quiz chalkboard crayon folder stapler ruler spelling reading history science geometry algebra alphabet diploma locker cafeteria principal",
+Home:"kitchen bedroom bathroom attic basement garage porch fireplace chimney window doorbell staircase balcony couch cushion curtain carpet toaster blender fridge oven faucet shelf drawer mailbox hallway",
+Transport:"airplane helicopter submarine tractor scooter skateboard motorcycle trolley subway ferry canoe kayak sailboat taxi truck ambulance wagon sled rickshaw balloon",
+Fantasy:"dragon unicorn wizard fairy mermaid goblin pirate knight princess treasure ghost robot alien monster vampire werewolf phoenix sorcerer",
+Party:"birthday parade fireworks holiday festival carnival present ribbon picnic vacation sleepover",
+Describing:"bouncy sparkly giant tiny fuzzy slippery bumpy crunchy squishy shiny gigantic enormous mysterious magical wonderful fantastic colorful dazzling glimmer whisper giggle wobble tickle jumble bubble puddle pebble tumble"
+};
+const MAX=7, VOWELS="aeiou";
+const ALL=[];const seen=new Set();
+for(const c in WORDS)for(const w of WORDS[c].split(" "))if(!seen.has(w)){seen.add(w);ALL.push({w,c})}
+let wins=0,losses=0,pool=[],played=0,word,cat,guessed,wrong,over;
+function score(){$("count").textContent="Won: "+wins+"   Lost: "+losses}
+const $=id=>document.getElementById(id);
+const parts=[...document.querySelectorAll(".part")];
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function nextWord(){
+  let reshuffled=false;
+  if(!pool.length){pool=shuffle(ALL.slice());reshuffled=played>0}
+  const n=pool.pop();played++;
+  return {n,reshuffled};
+}
+function build(){
+  const keys=$("keys");keys.innerHTML="";
+  for(const ch of "abcdefghijklmnopqrstuvwxyz"){
+    const b=document.createElement("button");
+    b.textContent=ch.toUpperCase();b.dataset.k=ch;
+    b.className=VOWELS.includes(ch)?"vowel":"";
+    b.setAttribute("aria-label","Guess "+ch);
+    b.onclick=()=>guess(ch);
+    keys.appendChild(b);
+  }
+}
+function start(){
+  const {n,reshuffled}=nextWord();
+  word=n.w;cat=n.c;guessed=new Set();wrong=0;over=false;
+  build();stopConfetti();
+  $("again").hidden=true;
+  $("status").textContent=reshuffled?"You played every word! Starting a fresh shuffle.":"";
+  $("status").className="";
+  $("cat").textContent="Category: "+cat;
+  score();
+  render();
+}
+function render(){
+  parts.forEach((p,i)=>p.classList.toggle("on",i<wrong));
+  $("worry").style.display=wrong===6?"":"none";
+  $("sad").style.display=wrong>=7?"":"none";
+  $("left").textContent=(MAX-wrong)+" wrong guess"+(MAX-wrong===1?"":"es")+" left";
+  $("word").innerHTML="";
+  for(const ch of word){
+    const s=document.createElement("div");
+    s.className="slot"+(over&&!guessed.has(ch)?" miss":"");
+    s.textContent=(guessed.has(ch)||over)?ch.toUpperCase():"";
+    $("word").appendChild(s);
+  }
+}
+function guess(ch){
+  if(over||guessed.has(ch))return;
+  guessed.add(ch);
+  const btn=document.querySelector('[data-k="'+ch+'"]');
+  btn.disabled=true;
+  if(word.includes(ch))btn.classList.add("right");
+  else{btn.classList.add("wrong");wrong++}
+  const won=[...word].every(c=>guessed.has(c));
+  if(won||wrong>=MAX){
+    over=true;if(won)wins++;else losses++;score();
+    document.querySelectorAll("#keys button").forEach(b=>b.disabled=true);
+    $("status").textContent=won?"You got it! The word is "+word+"!":"Out of guesses. The word was "+word+".";
+    $("status").className=won?"win":"lose";
+    $("again").hidden=false;$("again").focus();
+    if(won)confetti();
+  }
+  render();
+}
+/* confetti */
+const cv=$("confetti"),cx=cv.getContext("2d");let bits=[],raf=null,endAt=0;
+function size(){cv.width=innerWidth;cv.height=innerHeight}
+addEventListener("resize",size);size();
+function confetti(){
+  const colors=["#ff4d8d","#ff9f1c","#ffd43b","#22c55e","#3b82f6","#8b5cf6"];
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const n=reduce?40:160;
+  bits=Array.from({length:n},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.5,w:6+Math.random()*6,h:8+Math.random()*8,vx:-1.5+Math.random()*3,vy:2+Math.random()*3.5,r:Math.random()*6,vr:-.2+Math.random()*.4,c:colors[Math.floor(Math.random()*colors.length)]}));
+  endAt=performance.now()+4500;
+  cancelAnimationFrame(raf);raf=requestAnimationFrame(tick);
+}
+function tick(t){
+  cx.clearRect(0,0,cv.width,cv.height);
+  for(const b of bits){b.x+=b.vx;b.y+=b.vy;b.r+=b.vr;
+    cx.save();cx.translate(b.x,b.y);cx.rotate(b.r);cx.fillStyle=b.c;cx.fillRect(-b.w/2,-b.h/2,b.w,b.h);cx.restore()}
+  bits=bits.filter(b=>b.y<cv.height+30);
+  if(bits.length&&t<endAt+3000)raf=requestAnimationFrame(tick);else cx.clearRect(0,0,cv.width,cv.height);
+}
+function stopConfetti(){cancelAnimationFrame(raf);bits=[];cx.clearRect(0,0,cv.width,cv.height)}
+
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key.toLowerCase();
+  if(/^[a-z]$/.test(k))guess(k);
+});
+$("again").onclick=start;
+start();
+</script>
+</body>
+</html>
