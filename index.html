@@ -89,7 +89,7 @@ Fantasy:"dragon unicorn wizard fairy mermaid goblin pirate knight princess treas
 Party:"birthday parade fireworks holiday festival carnival present ribbon picnic vacation sleepover",
 Describing:"bouncy sparkly giant tiny fuzzy slippery bumpy crunchy squishy shiny gigantic enormous mysterious magical wonderful fantastic colorful dazzling glimmer whisper giggle wobble tickle jumble bubble puddle pebble tumble"
 };
-const MAX=8, VOWELS="aeiouy";
+const MAX=7, VOWELS="aeiouy";
 const ALL=[];const seen=new Set();
 for(const c in WORDS)for(const w of WORDS[c].split(" "))if(!seen.has(w)){seen.add(w);ALL.push({w,c})}
 let wins=0,losses=0,pool=[],played=0,word,cat,guessed,wrong,over;
